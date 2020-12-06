@@ -54,10 +54,11 @@ class AipStack(core.Stack):
             cb.FilterGroup.in_event_of(cb.EventAction.PUSH).and_branch_is('main')
         ]
         return cb.Source.git_hub(owner=owner, repo=repo, webhookfilters=filters)
-            
+
     def setup_codebuild(self) -> None:
         """Setup CodeBuild"""
-        source = cb.Source.code_commit(repository=self.code_repo, branch_or_ref='main')
+        # source = cb.Source.code_commit(repository=self.code_repo, branch_or_ref='main')
+        source = self._get_github_source(owner='demonye', repo=self.name)
         self.build_project = cb.Project(self, 'AIP-codebuild-project-1', source=source)
 
     def setup_ecr(self) -> None:
