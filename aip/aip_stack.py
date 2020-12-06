@@ -3,6 +3,8 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_codecommit as cc,
     aws_codebuild as cb,
+    aws_codepipeline as cp,
+    aws_codepipeline_actions as cp_actions,
     aws_ecr as ecr,
 )
 
@@ -12,8 +14,7 @@ class AipStack(core.Stack):
 
     name = 'aws-infra-provisioning'
     _steps = (
-        'codecommit',
-        'codebuild',
+        'codepipeline',
         'ecr',
         's3',
     )
@@ -21,6 +22,7 @@ class AipStack(core.Stack):
     def __init__(self, scope: core.Construct, construct_id: str, **kwargs) -> None:
         """AIP __init__"""
         super().__init__(scope, construct_id, **kwargs)
+        self.code_repo = None
         for step in self._steps:
             getattr(self, f'setup_{step}')()
 
@@ -32,13 +34,6 @@ class AipStack(core.Stack):
             versioned=True,
             public_read_access=True,
             removal_policy=core.RemovalPolicy.DESTROY,
-        )
-
-    def setup_codecommit(self) -> None:
-        """Setup CodeCommit"""
-        self.code_repo = cc.Repository(
-            self, 'AIP-codecommit-repo-1',
-            repository_name=self.name,
         )
 
     def _get_github_source(self, owner: str, repo: str = None) -> cb.Source:
@@ -53,13 +48,48 @@ class AipStack(core.Stack):
         filters = [
             cb.FilterGroup.in_event_of(cb.EventAction.PUSH).and_branch_is('main')
         ]
-        return cb.Source.git_hub(owner=owner, repo=repo, webhookfilters=filters)
+        return cb.Source.git_hub(owner=owner, repo=repo, webhook_filters=filters)
 
-    def setup_codebuild(self) -> None:
-        """Setup CodeBuild"""
-        # source = cb.Source.code_commit(repository=self.code_repo, branch_or_ref='main')
-        source = self._get_github_source(owner='demonye', repo=self.name)
-        self.build_project = cb.Project(self, 'AIP-codebuild-project-1', source=source)
+    def setup_codepipeline(self) -> None:
+        """Setup CodePipeline"""
+        code_repo = cc.Repository(
+            self, 'AIP-codecommit-repo-1',
+            repository_name=self.name,
+        )
+        source = cb.Source.code_commit(repository=code_repo)
+        # source = self._get_github_source(owner='demonye', repo=self.name)
+        build_project = cb.Project(self, 'AIP-codebuild-project-1', source=source)
+
+        code_repo = cc.Repository.from_repository_name(
+            self, 'ImportedRepo',
+            repository_name=self.name,
+        )
+        source_output = cp.Artifact()
+        source_action = cp_actions.CodeCommitSourceAction(
+            action_name="CodeCommit",
+            repository=code_repo,
+            output=source_output
+        )
+        build_action = cp_actions.CodeBuildAction(
+            action_name="CodeBuild",
+            project=build_project,
+            input=source_output,
+            outputs=[cp.Artifact()]
+        )
+        self.pipeline = cp.Pipeline(
+            self, 'AIP-codepipeline-pipeline-1',
+            pipeline_name=self.name,
+            stages=[
+                cp.StageProps(
+                    stage_name='Source',
+                    actions=[source_action],
+                ),
+                cp.StageProps(
+                    stage_name='Build',
+                    actions=[build_action],
+                ),
+            ]
+        )
 
     def setup_ecr(self) -> None:
         """Setup ECR"""
