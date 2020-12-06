@@ -2,14 +2,16 @@
 # Welcome to AWS Infrastructure Provisioning!
 
 ## What to be provisioned
+* S3 buckets
+* CodeBuild
+* ECR
+
+### To-do
 * VPC/subnets
 * Availability Zone
-* S3 buckets
 * RDS
-* ECR
 * ECS
 * Fargate
-* CodeBuild
 * CodeDeploy
 * CodePipeline
 
