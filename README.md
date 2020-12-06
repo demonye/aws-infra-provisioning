@@ -2,15 +2,16 @@
 # Welcome to AWS Infrastructure Provisioning!
 
 ## What to be provisioned
-VPC and subnets
-Availability Zone
-RDS
-ECR
-ECS
-Fargate
-CodeBuild
-CodeDeploy
-CodePipeline
+* VPC/subnets
+* Availability Zone
+* S3 buckets
+* RDS
+* ECR
+* ECS
+* Fargate
+* CodeBuild
+* CodeDeploy
+* CodePipeline
 
 ## How to run
 
@@ -31,3 +32,5 @@ Deploy this stack to your default AWS account/region by running:
 ```
 cdk deploy
 ```
+
+Or deply to the indicated AWS account/region `cdk deploy --profile YOUR_PROFILE`
