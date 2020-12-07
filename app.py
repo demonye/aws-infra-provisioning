@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 from aws_cdk import core
-from aip.aip_stack import AipStack
+from stacks import S3Stack, EcrStack, PipelineStack
 
 app = core.App()
-AipStack(app, "aip")
-app.synth()
+S3Stack(app, 'todo-list-s3')
+EcrStack(app, 'todo-list-ecr')
+PipelineStack(app, 'todo-list-pipeline', 'todo-list-web')
+# app.synth()
