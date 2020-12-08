@@ -3,8 +3,10 @@
 
 ## What to be provisioned
 * S3 buckets
-* CodeBuild
 * ECR
+* CodeBuild
+* CodeDeploy
+* CodePipeline
 
 ### To-do
 * VPC/subnets
@@ -12,8 +14,11 @@
 * RDS
 * ECS
 * Fargate
-* CodeDeploy
-* CodePipeline
+* Pipeline
+    * Deply golang lambda
+    * Versioning
+    * Build image
+* Tests
 
 ## How to run
 
@@ -32,7 +37,11 @@ If not, refers to [AWS CDK Guide](https://docs.aws.amazon.com/cdk/latest/guide/g
 Deploy this stack to your default AWS account/region by running:
 
 ```
-cdk deploy
+cdk deploy --all
 ```
 
-Or deply to the indicated AWS account/region `cdk deploy --profile YOUR_PROFILE`
+Or deply to the indicated AWS account/region
+
+```
+cdk deploy --profile YOUR_PROFILE --all`
+```

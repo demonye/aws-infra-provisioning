@@ -1,5 +1,7 @@
 import setuptools
 
+from src.lib.helpers import get_install_requires
+
 
 with open("README.md") as fp:
     long_description = fp.read()
@@ -7,7 +9,7 @@ with open("README.md") as fp:
 
 setuptools.setup(
     name="aip",
-    version="0.0.1",
+    version="0.0.2",
 
     description="An empty CDK Python app",
     long_description=long_description,
@@ -18,17 +20,7 @@ setuptools.setup(
     package_dir={"": "aip"},
     packages=setuptools.find_packages(where="aip"),
 
-    install_requires=[
-        "aws-cdk.core==1.76.0",
-        "aws-cdk.aws-lambda==1.76.0",
-        "aws-cdk.aws-s3==1.76.0",
-        "aws-cdk.aws-ecr==1.76.0",
-        "aws-cdk.aws-rds==1.76.0",
-        "aws-cdk.aws-codebuild==1.76.0",
-        "aws-cdk.aws-codedeploy==1.76.0",
-        "aws-cdk.aws-codepipeline==1.76.0",
-        "aws-cdk.aws-codepipeline-actions==1.76.0",
-    ],
+    install_requires=get_install_requires('prod'),
 
     python_requires=">=3.6",
 
