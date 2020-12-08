@@ -7,7 +7,6 @@
 * CodeBuild
 * CodeDeploy
 * CodePipeline
-* Tests
 
 ### To-do
 * VPC/subnets
@@ -15,10 +14,13 @@
 * RDS
 * ECS
 * Fargate
+* CloudFront
+* S3 static web hosting
 * Pipeline
     * Deply golang lambda
     * Versioning
     * Build image
+* Tests
 
 ## How to run
 
