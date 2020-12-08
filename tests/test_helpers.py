@@ -1,7 +1,14 @@
-import unittest
 import os
+import sys
+import re
+from io import StringIO
 import tempfile
-from src.lib.helpers import get_install_requires
+import unittest
+
+from src.lib.helpers import (
+    get_logger,
+    get_install_requires,
+)
 
 
 class TestInstallRequires(unittest.TestCase):
@@ -19,6 +26,7 @@ class TestInstallRequires(unittest.TestCase):
         ],
         'require2.txt': [
             '-r require1.txt',
+            ' # comment 123456  ',
             'XYZ==20.9999',
         ]
     }
@@ -66,3 +74,20 @@ class TestInstallRequires(unittest.TestCase):
             'ABC==10.0.1',
             'XYZ==20.9999',
         ]
+
+
+class TestGetLogger(unittest.TestCase):
+
+    def test_get_logger_default(self):
+        name = 'test123'
+        message = 'test message'
+        stream = StringIO()
+        logger = get_logger(name, stream=stream)
+        logger.info(message)
+        log_message = stream.getvalue()
+
+        date_regx = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}'
+        m = re.match(rf"^\[INFO\] \[{date_regx}\] (.+?) (.*)\n$", log_message)
+        self.assertIsNotNone(m)
+        self.assertEqual(m.group(1), name)
+        self.assertEqual(m.group(2), message)

@@ -7,6 +7,7 @@
 * CodeBuild
 * CodeDeploy
 * CodePipeline
+* Tests
 
 ### To-do
 * VPC/subnets
@@ -18,7 +19,6 @@
     * Deply golang lambda
     * Versioning
     * Build image
-* Tests
 
 ## How to run
 
