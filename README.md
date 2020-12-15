@@ -2,18 +2,33 @@
 # Welcome to AWS Infrastructure Provisioning!
 
 ## What to be provisioned
-* S3 buckets
-* CodeBuild
-* ECR
-
-### To-do
 * VPC/subnets
-* Availability Zone
-* RDS
-* ECS
-* Fargate
-* CodeDeploy
-* CodePipeline
+* ECS cluster with Fargate service
+* S3 buckets
+* CloudFront
+* Database on RDS
+* ECR repository
+* Frontend pipeline
+* Backend pipeline
+
+## CloudFormation Stacks
+
+* CloudFront Stack
+  * Cloud Front
+  * S3
+* Pipeline Stack
+  * CodeBuild (frontend)
+  * CodeDeploy (frontend)
+  * CodePipeline (frontend)
+  * CodeBuild (backend)
+  * CodeDeploy (to do)
+  * CodePipeline (backend)
+* Database Stack
+  * RDS
+* Ecs Stack
+  * VPC/subnets
+  * ECS cluster with Fargate service
+  * ELB (To be fixed)
 
 ## How to run
 
@@ -23,16 +38,20 @@ git clone https://github.com/demonye/aws-infra-provisioning.git aip
 cd aip
 python3 -m venv .venv/aip
 source .venv/aip/bin/activate
-pip install -r requirements.txt
+pip install -r requirements/base.txt
 ```
 
 Assume you have installed cdk client.
 If not, refers to [AWS CDK Guide](https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html#getting_started_install).
 
-Deploy this stack to your default AWS account/region by running:
+Check your aws profile and build up stacks
 
 ```
-cdk deploy
+# Check your ~/.aws/credentials get the YOUR_PROFILE
+export AWS_PROFILE=YOUR_PROFILE
+cdk deploy ECS
+cdk deploy Database
+cdk deploy CloudFront
+cdk deploy FrontendPipeline
+cdk deploy BackendPipeline
 ```
-
-Or deply to the indicated AWS account/region `cdk deploy --profile YOUR_PROFILE`
