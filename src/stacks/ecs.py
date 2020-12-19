@@ -6,10 +6,10 @@ from aws_cdk import (
     aws_elasticloadbalancingv2 as elbv2,
 )
 
-from . import ConfigStoreMixin
+from . import BaseStack
 
 
-class EcsStack(ConfigStoreMixin, core.Stack):
+class EcsStack(BaseStack):
     """AWS Infrastructure Provisioning: ECS Stack"""
 
     def __init__(self, scope: core.Construct, construct_id: str, **kwargs) -> None:

@@ -1,13 +1,14 @@
 from aws_cdk import (
     core,
     aws_ec2 as ec2,
+    aws_s3 as s3,
     aws_rds as rds,
 )
 
-from . import ConfigStoreMixin
+from . import BaseStack
 
 
-class DatabaseStack(ConfigStoreMixin, core.Stack):
+class DatabaseStack(BaseStack):
     """AWS Infrastructure Provisioning: RDS Stack"""
 
     def __init__(self, scope: core.Construct, construct_id: str, **kwargs) -> None:
@@ -37,3 +38,11 @@ class DatabaseStack(ConfigStoreMixin, core.Stack):
                 'subnet_type': ec2.SubnetType.PRIVATE
             }
         )
+
+        # source_bucket = s3.Bucket(
+        #     self, 'FrontendBucket',
+        #     bucket_name=self.config.frontend_bucket_name,
+        #     versioned=True,
+        #     public_read_access=kwargs.get('public_read_access', True),
+        #     removal_policy=core.RemovalPolicy.DESTROY,
+        # )
