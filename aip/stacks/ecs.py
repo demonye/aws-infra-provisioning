@@ -35,11 +35,11 @@ class EcsStack(BaseStack):
             subnet_configuration=[
                 ec2.SubnetConfiguration(
                     subnet_type=ec2.SubnetType.PUBLIC,
-                    name='Ingress',
+                    name='Public',
                     cidr_mask=24,
                 ), ec2.SubnetConfiguration(
-                    subnet_type=ec2.SubnetType.PRIVATE,
-                    name='Application',
+                    subnet_type=ec2.SubnetType.ISOLATED,
+                    name='Isolated',
                     cidr_mask=24,
                 )
             ]
@@ -47,7 +47,7 @@ class EcsStack(BaseStack):
 
         # Create an ECS cluster
         cluster = ecs.Cluster(
-            self, 'Clsuter', vpc=vpc,
+            self, 'Cluster', vpc=vpc,
             cluster_name=self.config.custer_name,
         )
 
@@ -71,21 +71,21 @@ class EcsStack(BaseStack):
         )
 
         # Instantiate an Amazon ECS Service
-        ecs.FargateService(
+        service = ecs.FargateService(
             self, "Service",
             cluster=cluster,
             task_definition=task_definition
         )
 
         # FIXME Setup load balancer
-        # lb = elbv2.ApplicationLoadBalancer(self, 'LB', vpc=vpc, internet_facing=True)
-        # listener = lb.add_listener('Listener', port=8000)
-        # service.register_load_balancer_targets(
-        #     container_name='web',
-        #     container_port=8000,
-        #     new_target_group_id='ECS',
-        #     listener=ecs.ListenerConfig.application_listener(
-        #         listener,
-        #         protocol=elbv2.ApplicationProtocol.HTTPS
-        #     )
-        # )
+        lb = elbv2.ApplicationLoadBalancer(self, 'LB', vpc=vpc, internet_facing=True)
+        listener = lb.add_listener('Listener', port=8000)
+        service.register_load_balancer_targets(
+            container_name='web',
+            container_port=8000,
+            new_target_group_id='ECS',
+            listener=ecs.ListenerConfig.application_listener(
+                listener,
+                protocol=elbv2.ApplicationProtocol.HTTPS
+            )
+        )

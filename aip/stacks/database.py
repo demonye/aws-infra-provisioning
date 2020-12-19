@@ -33,7 +33,7 @@ class DatabaseStack(BaseStack):
             self, 'Database',
             engine=rds.DatabaseInstanceEngine.mysql(version=rds.MysqlEngineVersion.VER_8_0_21),
             instance_type=ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE2, ec2.InstanceSize.MICRO),
-            vpc=ec2.Vpc.from_lookup(self, 'Vpc', vpc_name='ECS/SimpleTodoVpc'),
+            vpc=ec2.Vpc.from_lookup(self, 'Vpc', vpc_name='SimpleTodoVpc'),
             vpc_subnets={
                 'subnet_type': ec2.SubnetType.PRIVATE
             }

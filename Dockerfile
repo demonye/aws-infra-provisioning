@@ -4,8 +4,12 @@ RUN apk update && apk add nodejs npm
 RUN npm install -g aws-cdk && cdk --version
 
 RUN mkdir /app
-WORKDIR /app
-COPY app.py cdk.json src requirements tests .
-RUN pip install -r requirements/prod.txt && rm -rf requirements
 
-CMD ["cdk", "--help"]
+WORKDIR /app
+COPY requirements /app/requirements/
+RUN pip install -r requirements/prod.txt
+COPY aip /app/aip/
+COPY tests /app/tests/
+COPY app.py tasks.py cdk.json /app/
+
+CMD ["invoke", "deploy"]

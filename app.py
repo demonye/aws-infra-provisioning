@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from aws_cdk import core
-from src import stacks
+from aip import stacks
 
 app = core.App()
 

@@ -5,7 +5,7 @@ from io import StringIO
 import tempfile
 import unittest
 
-from src.lib.helpers import (
+from aip.helpers import (
     get_logger,
     get_install_requires,
 )

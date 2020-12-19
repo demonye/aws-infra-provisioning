@@ -1,7 +1,7 @@
 import os
 import boto3
 from aws_cdk import core
-from src.lib.helpers import DotDict
+from ..helpers import DotDict
 
 
 class BaseStack(core.Stack):

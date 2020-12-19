@@ -1,6 +1,6 @@
 import setuptools
 
-from src.lib.helpers import get_install_requires
+from aip.helpers import get_install_requires
 
 
 with open("README.md") as fp:
@@ -9,7 +9,7 @@ with open("README.md") as fp:
 
 setuptools.setup(
     name="aip",
-    version="0.0.3",
+    version="0.0.4",
 
     description="An empty CDK Python app",
     long_description=long_description,
