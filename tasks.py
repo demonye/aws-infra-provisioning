@@ -14,6 +14,7 @@ def deploy(c):
         Prompt.ask('AWS [bold yellow]secret access key[/]? ')
     region_name = os.getenv('AWS_DEFAULT_REGION') or \
         Prompt.ask('Region name? ')
+
     set_envs = (
         f'AWS_ACCESS_KEY_ID={access_key_id} '
         f'AWS_SECRET_ACCESS_KEY={secret_access_key} '
