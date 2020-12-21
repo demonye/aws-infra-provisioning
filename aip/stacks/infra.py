@@ -278,7 +278,7 @@ class InfraStack(BaseStack):
                         cp_actions.CodeCommitSourceAction(
                             action_name='Source',
                             repository=source_repo,
-                            branch='main',
+                            branch='master',
                             output=source_output,
                         )
                     ]
@@ -300,8 +300,8 @@ class InfraStack(BaseStack):
                         cp_actions.EcsDeployAction(
                             action_name='Deploy',
                             service=service.service,
-                            # input=build_output,
-                            image_file=build_output.at_path('imagedefinitions.json')
+                            input=build_output,
+                            # image_file=build_output.at_path('imagedefinitions.json')
                         )
                     ]
                 )
