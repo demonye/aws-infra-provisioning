@@ -21,4 +21,9 @@ def deploy(c):
         f'AWS_DEFAULT_REGION={region_name} '
     )
 
-    run(f'{set_envs} cdk synth')
+    # run('dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 1>/tmp/dockerd.log 2>&1 &')
+    # run('sleep 3')
+
+    run(f'{set_envs} && cd demoapp && ash ./set_code.sh')
+    run(f'{set_envs} && cd demoapp && ash ./build.sh')
+    run(f'{set_envs} cdk deploy')
