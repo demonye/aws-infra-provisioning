@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 account_id=$(aws sts get-caller-identity |jq -r .Account)
 repository_uri=$(aws ecr describe-repositories --repository-name simpletodo 2>/dev/null |jq -r .repositories[0].repositoryUri)

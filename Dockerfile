@@ -1,4 +1,3 @@
-# FROM python:3.8-alpine
 FROM docker:18-dind
 
 RUN apk update && apk add nodejs npm python3 py3-pip git jq
@@ -14,5 +13,3 @@ COPY aip /app/aip/
 COPY tests /app/tests/
 COPY app.py tasks.py cdk.json deploy.sh /app/
 COPY demoapp /app/demoapp/
-
-# CMD ["ash", "./deploy.sh"]

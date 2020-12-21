@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 
 if [[ -z "$AWS_ACCESS_KEY_ID" ]]; then
@@ -18,8 +18,8 @@ fi
 # sleep 3
 
 cd demoapp
-ash ./set_code.sh
-ash ./build.sh
+sh ./set_code.sh
+sh ./build.sh
 cd ..
 
 cdk deploy

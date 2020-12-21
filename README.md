@@ -2,56 +2,31 @@
 # Welcome to AWS Infrastructure Provisioning!
 
 ## What to be provisioned
-* VPC/subnets
-* ECS cluster with Fargate service
+* VPC and network setup
+* ECS cluster with Fargate service and Load Balancer
 * S3 buckets
 * CloudFront
-* Database on RDS
 * ECR repository
-* Frontend pipeline
-* Backend pipeline
+* Deployment pipeline
 
 ## CloudFormation Stacks
 
-* CloudFront Stack
+* Infra Stack
   * Cloud Front
   * S3
-* Pipeline Stack
-  * CodeBuild (frontend)
-  * CodeDeploy (frontend)
-  * CodePipeline (frontend)
-  * CodeBuild (backend)
-  * CodeDeploy (to do)
-  * CodePipeline (backend)
-* Database Stack
-  * RDS
-* Ecs Stack
+  * CodePipeline (including build and deploy to ECS)
+  * RDS (Commented out for now due to long wait)
   * VPC/subnets
-  * ECS cluster with Fargate service
-  * ELB (To be fixed)
+  * ECS patterns service (ALB Fargate)
 
 ## How to run
 
 ```
-mkdir aip
-git clone https://github.com/demonye/aws-infra-provisioning.git aip
-cd aip
-python3 -m venv .venv/aip
-source .venv/aip/bin/activate
-pip install -r requirements/base.txt
-```
-
-Assume you have installed cdk client.
-If not, refers to [AWS CDK Guide](https://docs.aws.amazon.com/cdk/latest/guide/getting_started.html#getting_started_install).
-
-Check your aws profile and build up stacks
-
-```
-# Check your ~/.aws/credentials get the YOUR_PROFILE
-export AWS_PROFILE=YOUR_PROFILE
-cdk deploy ECS
-cdk deploy Database
-cdk deploy CloudFront
-cdk deploy FrontendPipeline
-cdk deploy BackendPipeline
+docker pull demonye/aws-infra-provisioning:latest
+docker run --rm --name aip-demo -d demonye/aws-infra-provisioning
+docker exec \
+-e AWS_ACCESS_KEY_ID=<your_aws_access_key_id> \
+-e AWS_SECRET_ACCESS_KEY=<your_aws_secret_access_key> \
+-e AWS_DEFAULT_REGION=<your_aws_default_region> \
+-it aip-demo ash deploy.sh
 ```

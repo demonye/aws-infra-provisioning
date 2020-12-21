@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 repo_name=SimpleTodo
 cmd_output=$(aws codecommit create-repository --repository-name $repo_name 2>&1)
