@@ -12,6 +12,7 @@ from aws_cdk import (
     aws_elasticloadbalancingv2 as elbv2,
     aws_elasticloadbalancingv2_targets as targets,
     aws_ecs_patterns as patterns,
+    aws_cloudfront as cf,
 
     aws_codecommit as cc,
     aws_codebuild as cb,
@@ -30,10 +31,8 @@ class InfraStack(BaseStack):
 
         Parameters
         ----------
-        scope :
-            core.Construct
-        construct_id :
-            str
+        scope : core.Construct
+        construct_id : str
 
         Returns
         -------
@@ -54,6 +53,8 @@ class InfraStack(BaseStack):
         source_repo = self.setup_source_repo()
         build_project = self.setup_build_project(ecr_repo)
         self.setup_pipeline(source_repo, build_project, service)
+
+        # elbv2.ApplicationLoadBalancer.from_lookup(self, 'LB')
 
     def setup_vpc(self):
         """Setup VPC and network"""
@@ -148,6 +149,8 @@ class InfraStack(BaseStack):
             memory_limit_mib=512,
             desired_count=2,            # Default is 1
             task_image_options=patterns.ApplicationLoadBalancedTaskImageOptions(
+                container_name=self.config.ecr_repo_name,
+                container_port=8000,
                 image=ecs.ContainerImage.from_ecr_repository(ecr_repo)),
             public_load_balancer=True
         )
@@ -194,18 +197,13 @@ class InfraStack(BaseStack):
             build_spec=cb.BuildSpec.from_object(dict(
                 version=0.2,
                 phases={
-                    # 'install': {'commands': [
-                    #     'pip install -r src/test.txt'
-                    # ]},
-                    # 'pre_build': {'commands': [
-                    #     'cd src',
-                    #     'coverage run --source=. manage.py test',
-                    #     'coverage report -m',
-                    #     'cd ..',
-                    #     'aws --version',
-                    #     '$(aws ecr get-login --no-include-email)',
-                    #     'VERSION=$(cat VERSION)'
-                    # ]},
+                    'install': {'commands': [
+                        'pip install -r requirements_test.txt'
+                    ]},
+                    'pre_build': {'commands': [
+                        'coverage run --source=. -m unittest',
+                        'coverage report -m',
+                    ]},
                     'build': {'commands': [
                         f'docker build . -t {ecr_repo.repository_uri}:latest',
                     ]},
@@ -259,8 +257,8 @@ class InfraStack(BaseStack):
 
         Parameters
         ----------
-        build_object :
-            PipelineProject the object returned from self.setup_build_project
+        build_object : PipelineProject
+            The object returned from self.setup_build_project
 
         Returns
         -------

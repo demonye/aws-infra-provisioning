@@ -2,8 +2,8 @@ FROM python:3-alpine
 
 RUN mkdir /app
 WORKDIR /app
-RUN pip install fastapi uvicorn
-COPY main.py .
-EXPOSE 80
+COPY main.py requirements.txt .
+RUN pip install -r requirements.txt
+EXPOSE 8000
 
-CMD ["uvicorn", "--port", "80", "main:app"]
+CMD ["uvicorn", "--host", "0.0.0.0", "--port", "8000", "main:app"]
