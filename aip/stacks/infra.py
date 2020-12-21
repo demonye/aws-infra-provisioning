@@ -13,6 +13,7 @@ from aws_cdk import (
     aws_elasticloadbalancingv2_targets as targets,
     aws_ecs_patterns as patterns,
     aws_cloudfront as cf,
+    aws_cloudfront_origins as origins,
 
     aws_codecommit as cc,
     aws_codebuild as cb,
@@ -48,7 +49,8 @@ class InfraStack(BaseStack):
         cluster = self.setup_cluster()
         ecr_repo = self.setup_ecr()
         service = self.setup_service(cluster, ecr_repo)
-        # self.setup_lb(service)
+
+        self.setup_cloudfront(service)
 
         source_repo = self.setup_source_repo()
         build_project = self.setup_build_project(ecr_repo)
@@ -153,6 +155,17 @@ class InfraStack(BaseStack):
                 container_port=8000,
                 image=ecs.ContainerImage.from_ecr_repository(ecr_repo)),
             public_load_balancer=True
+        )
+
+    def setup_cloudfront(self, service):
+        """Setup CloudFront pointing to LB"""
+        cf.Distribution(
+            self, 'CloudFront',
+            # origin_configs=[source_config],
+            default_behavior={
+                'origin': origins.LoadBalancerV2Origin(service.load_balancer),
+                'allowed_methods': cf.AllowedMethods.ALLOW_ALL,
+            },
         )
 
     def setup_ecr(self):
