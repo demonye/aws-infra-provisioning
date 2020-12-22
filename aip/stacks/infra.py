@@ -152,7 +152,7 @@ class InfraStack(BaseStack):
             desired_count=2,            # Default is 1
             task_image_options=patterns.ApplicationLoadBalancedTaskImageOptions(
                 container_name=self.config.ecr_repo_name,
-                container_port=8000,
+                container_port=80,
                 image=ecs.ContainerImage.from_ecr_repository(ecr_repo)),
             public_load_balancer=True
         )
