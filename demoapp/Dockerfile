@@ -4,6 +4,6 @@ RUN mkdir /app
 WORKDIR /app
 COPY main.py requirements.txt ./
 RUN pip install -r requirements.txt
-EXPOSE 8000
+EXPOSE 80
 
-CMD ["uvicorn", "--host", "0.0.0.0", "--port", "8000", "main:app"]
+CMD ["uvicorn", "--host", "0.0.0.0", "--port", "80", "main:app"]
