@@ -1,0 +1,5 @@
+{
+  "table_name": "eric-devops-demo-tasks",
+  "source_repo": "eric-devops-demo-api",
+  "ecr_repo": "eric-devops-demo-api"
+}

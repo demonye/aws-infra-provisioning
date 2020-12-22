@@ -1,0 +1,4 @@
+-r requirements.txt
+
+moto[dynamodb2]
+coverage
