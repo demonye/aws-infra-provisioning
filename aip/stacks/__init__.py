@@ -9,6 +9,7 @@ class BaseStack(core.Stack):
 
     def __init__(self, *args, **kwargs):
         # domain = 'simple2do'
+        sts = boto3.client('sts')
         app = 'SimpleTodo'
         self.config = DotDict(
             app_name=app,
@@ -22,6 +23,8 @@ class BaseStack(core.Stack):
             # frontend_repo=domain,
             # frontend_bucket_name=domain,
 
+            table_name='aip_demo_tasks',
+
             # frontend_build_output=f'{app}FrontendBuildOutput',
             # frontend_pipeline=f'{app}FrontendPipeline',
 
@@ -30,12 +33,12 @@ class BaseStack(core.Stack):
             ecr_repo_name=app.lower(),
 
             db_name=app.lower(),
-        )
 
-        sts = boto3.client('sts')
-        account_id = sts.get_caller_identity()['Account']
+            account_id=sts.get_caller_identity()['Account'],
+            region_name=sts.meta.region_name,
+        )
         kwargs['env'] = core.Environment(
-            account=account_id, region=sts.meta.region_name)
+            account=self.config.account_id, region=self.config.region_name)
         super().__init__(*args, **kwargs)
 
 

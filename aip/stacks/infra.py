@@ -43,12 +43,12 @@ class InfraStack(BaseStack):
         super().__init__(scope, construct_id, **kwargs)
 
         self.vpc = self.setup_vpc()
-        self.setup_db()
         # asg = self.setup_asg()
 
         cluster = self.setup_cluster()
         ecr_repo = self.setup_ecr()
         service = self.setup_service(cluster, ecr_repo)
+        self.setup_db(service)
 
         self.setup_cloudfront(service)
 
@@ -77,15 +77,30 @@ class InfraStack(BaseStack):
             ]
         )
 
-    def setup_db(self):
+    def setup_db(self, service):
         """Setup DynamoDB database"""
 
-        table = db.Table.from_table_name(self, 'Table', table_name='cdkdemo')
+        table = db.Table.from_table_name(self, 'Table', table_name=self.config.table_name)
         if not table:
             table = db.Table(
-                self, 'Table', table_name='cdkdemo',
+                self, 'Table', table_name=self.config.table_name,
                 partition_key=db.Attribute(name='id', type=db.AttributeType.STRING)
             )
+        role = iam.Role.from_role_arn(self, 'ServiceRole', service.service.service_arn)
+        role.add_to_policy(iam.PolicyStatement(
+            resources=[table.table_arn],
+            actions=[
+                "dynamodb:Scan",
+                "dynamodb:Query",
+                'dynamodb:GetItem',
+                "dynamodb:PutItem",
+                'dynamodb:UpdateItem',
+                "dynamodb:DeleteItem",
+                "dynamodb:BatchGetItem",
+                "dynamodb:BatchWriteItem",
+            ],
+            sid='AllowFargateAccessDynamoDB'
+        ))
         return table
         # return rds.DatabaseInstance(
         #     self, 'Database',
@@ -156,22 +171,6 @@ class InfraStack(BaseStack):
                 image=ecs.ContainerImage.from_ecr_repository(ecr_repo)),
             public_load_balancer=True
         )
-        service.role.add_to_policy(iam.PolicyStatement(
-            resources=['*'],
-            actions=[
-                'dynamodb:BatchGetItem',
-                'dynamodb:GetRecords',
-                'dynamodb:GetShardIterator',
-                'dynamodb:Query',
-                'dynamodb:Scan',
-                'dynamodb:GetItem',
-                'dynamodb:BatchWriteItem',
-                'dynamodb:PutItem',
-                'dynamodb:UpdateItem',
-                'dynamodb:DeleteItem',
-            ],
-            sid='AllowFargateAccessDynamoDB'
-        ))
         return service
 
     def setup_cloudfront(self, service):
@@ -251,7 +250,7 @@ class InfraStack(BaseStack):
             ))
         )
         project.role.add_to_policy(iam.PolicyStatement(
-            resources=['*'],
+            resources=[project.project_arn],
             actions=[
                 'ecr:GetAuthorizationToken',
                 "ecr:InitiateLayerUpload",
