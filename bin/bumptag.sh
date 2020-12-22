@@ -13,6 +13,13 @@ minor=$(echo $version |cut -d. -f2)
 patch=$(echo $version |cut -d. -f3)
 
 (( $bumping_type += 1 ))
+if [ "$bumping_type" = "major" ]; then
+    minor=0
+    patch=0
+fi
+if [ "$bumping_type" = "minor" ]; then
+    patch=0
+fi
 version=$major.$minor.$patch
 
 sed -i "s/^\(.*version=\"\)\([0-9.]\+\)\(\".*\)$/\1$version\3/" setup.py
