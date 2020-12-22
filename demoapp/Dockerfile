@@ -2,7 +2,7 @@ FROM python:3-alpine
 
 RUN mkdir /app
 WORKDIR /app
-COPY main.py requirements.txt .
+COPY main.py requirements.txt ./
 RUN pip install -r requirements.txt
 EXPOSE 8000
 
