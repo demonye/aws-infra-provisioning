@@ -175,8 +175,29 @@ class SimpleTodoDB:
 db = SimpleTodoDB()
 
 
+@app.get('/')
+def version():
+    """Returns version
+
+    Read VERSION file content and return
+
+    Returns
+    -------
+    dict
+        {"version": <VERSION>}
+
+    """
+    try:
+        with open('VERSION') as fp:
+            return {'version': fp.read().strip()}
+    except (IOError, FileNotFoundError):
+        pass
+
+    return {'version': '_UNKNOWN_'}
+
+
 @app.get('/api/v1/task/')
-def read_root():
+def list_tasks():
     """GET method: list all tasks
 
     Notes
