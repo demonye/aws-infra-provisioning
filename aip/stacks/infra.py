@@ -228,7 +228,8 @@ class InfraStack(BaseStack):
                 version=0.2,
                 phases={
                     'install': {'commands': [
-                        'pip install -r requirements_test.txt'
+                        'pip install -r requirements_test.txt',
+                        'pip install -U awscli',
                     ]},
                     'pre_build': {'commands': [
                         'coverage run --source=. -m unittest',
