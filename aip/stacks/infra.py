@@ -86,8 +86,7 @@ class InfraStack(BaseStack):
                 self, 'Table', table_name=self.config.table_name,
                 partition_key=db.Attribute(name='id', type=db.AttributeType.STRING)
             )
-        role = iam.Role.from_role_arn(self, 'ServiceRole', service.service.service_arn)
-        role.add_to_policy(iam.PolicyStatement(
+        service.task_definition.execution_role.add_to_policy(iam.PolicyStatement(
             resources=[table.table_arn],
             actions=[
                 "dynamodb:Scan",
