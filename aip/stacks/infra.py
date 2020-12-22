@@ -14,6 +14,7 @@ from aws_cdk import (
     core,
 
     aws_ec2 as ec2,
+    aws_s3 as s3,
     aws_ecr as ecr,
     aws_iam as iam,
 
@@ -55,18 +56,25 @@ class InfraStack(BaseStack):
         self.vpc = self.setup_vpc()
         # asg = self.setup_asg()
 
-        cluster = self.setup_cluster()
-        ecr_repo = self.setup_ecr()
-        service = self.setup_service(cluster, ecr_repo)
-        self.setup_db(service)
+        # ECS Service
+        self.cluster = self.setup_cluster()
+        self.ecr_repo = self.setup_ecr()
+        self.service = self.setup_service()
 
-        self.setup_cloudfront(service)
+        # API pipeline
+        self.api_source = self.setup_api_source()
+        self.api_build_project = self.setup_api_build_project()
+        self.setup_api_pipeline()
 
-        source_repo = self.setup_source_repo()
-        build_project = self.setup_build_project(ecr_repo)
-        self.setup_pipeline(source_repo, build_project, service)
+        # Web pipeline
+        self.web_bucket = self.setup_web_bucket()
+        self.web_source = self.setup_web_source()
+        self.web_build_project = self.setup_web_build_project()
+        self.setup_web_pipeline()
 
-        # elbv2.ApplicationLoadBalancer.from_lookup(self, 'LB')
+        # Others
+        self.table = self.setup_db()
+        self.distribution = self.setup_cloudfront()
 
     def setup_vpc(self):
         """Setup VPC and network"""
@@ -87,16 +95,16 @@ class InfraStack(BaseStack):
             ]
         )
 
-    def setup_db(self, service):
+    def setup_db(self):
         """Setup DynamoDB database"""
 
-        table = db.Table.from_table_name(self, 'Table', table_name=self.config.table_name)
+        table = db.Table.from_table_name(self, 'Table', table_name=self.config.api.table_name)
         if not table:
             table = db.Table(
-                self, 'Table', table_name=self.config.table_name,
+                self, 'Table', table_name=self.config.api.table_name,
                 partition_key=db.Attribute(name='id', type=db.AttributeType.STRING)
             )
-        service.task_definition.execution_role.add_to_policy(iam.PolicyStatement(
+        self.service.task_definition.add_to_task_role_policy(iam.PolicyStatement(
             resources=[table.table_arn],
             actions=[
                 "dynamodb:Scan",
@@ -111,15 +119,6 @@ class InfraStack(BaseStack):
             sid='AllowFargateAccessDynamoDB'
         ))
         return table
-        # return rds.DatabaseInstance(
-        #     self, 'Database',
-        #     engine=rds.DatabaseInstanceEngine.mysql(version=rds.MysqlEngineVersion.VER_8_0_21),
-        #     instance_type=ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE2, ec2.InstanceSize.MICRO),
-        #     vpc=self.vpc,
-        #     vpc_subnets={
-        #         'subnet_type': ec2.SubnetType.PRIVATE
-        #     }
-        # )
 
     def setup_asg(self):
         """Setup the auto scaling group"""
@@ -135,80 +134,66 @@ class InfraStack(BaseStack):
     def setup_cluster(self):
         """Setup ECS cluster"""
 
-        cluster = ecs.Cluster(
+        return ecs.Cluster(
             self, 'Cluster', vpc=self.vpc,
             cluster_name=self.config.custer_name,
         )
-        # cluster.add_auto_scaling_group(asg)
-        # Add capacity to it
-        # cluster.add_capacity(
-        #     'DefaultAutoScalingGroup',
-        #     instance_type=ec2.InstanceType("t2.micro"),
-        #     desired_capacity=2,
-        #     task_drain_time=core.Duration.seconds(300)
-        # )
-        return cluster
 
-    def setup_lb(self, service):
-        """Setup load balancer"""
-
-        load_balancer = elbv2.ApplicationLoadBalancer(
-            self, 'LB',
-            vpc=self.vpc, internet_facing=True
-        )
-        listener = load_balancer.add_listener('Listener', port=80)
-        listener.add_targets(
-            'ApplicationFleet', port=8000,
-            targets=[service]
-            # targets=[targets.IpTarget('10.20.2.0/24')]
-            # targets=[asg]
-        )
-        return load_balancer
-
-    def setup_service(self, cluster, ecr_repo):
+    def setup_service(self):
         """Setup task definition"""
 
         service = patterns.ApplicationLoadBalancedFargateService(
             self, 'FargateService',
-            cluster=cluster,            # Required
+            cluster=self.cluster,            # Required
             cpu=256,                    # Default is 256
             memory_limit_mib=512,
             desired_count=2,            # Default is 1
             task_image_options=patterns.ApplicationLoadBalancedTaskImageOptions(
-                container_name=self.config.ecr_repo_name,
+                container_name=self.config.api.ecr_repo,
                 container_port=80,
-                image=ecs.ContainerImage.from_ecr_repository(ecr_repo)),
+                image=ecs.ContainerImage.from_ecr_repository(self.ecr_repo)),
             public_load_balancer=True
         )
         return service
 
-    def setup_cloudfront(self, service):
-        """Setup CloudFront pointing to LB"""
-        cf.Distribution(
+    def setup_cloudfront(self):
+        """Setup CloudFront
+        / is pointing to S3
+        /api is pointing to Load Balancer
+
+        """
+
+        return cf.Distribution(
             self, 'CloudFront',
-            # origin_configs=[source_config],
-            default_behavior={
-                'origin': origins.LoadBalancerV2Origin(service.load_balancer),
-                'allowed_methods': cf.AllowedMethods.ALLOW_ALL,
-            },
+            default_behavior=cf.BehaviorOptions(
+                origin=origins.S3Origin(self.web_bucket)),
+            additional_behaviors={
+                '/api/*': cf.BehaviorOptions(
+                    origin=origins.LoadBalancerV2Origin(
+                        self.service.load_balancer,
+                        protocol_policy=cf.OriginProtocolPolicy.HTTP_ONLY
+                    ),
+                    allowed_methods=cf.AllowedMethods.ALLOW_ALL,
+                )
+            }
         )
 
     def setup_ecr(self):
         """Get or create a ECR repository"""
 
         ecr_repo = ecr.Repository.from_repository_name(
-            self, 'Repository', repository_name=self.config.ecr_repo_name
+            self, 'Repository', repository_name=self.config.api.ecr_repo
         )
         if not ecr_repo:
             # create ECR repository object if no existing one
             ecr_repo = ecr.Repository(
                 self, 'Repository',
-                repository_name=self.config.ecr_repo_name,
+                repository_name=self.config.api.ecr_repo,
                 image_scan_on_push=True,
             )
         return ecr_repo
 
-    def setup_build_project(self, ecr_repo):
+    def setup_api_build_project(self):
         """Setup the build project.
         Using codebuild to create a PipelineProject
         including four phases:
@@ -227,7 +212,7 @@ class InfraStack(BaseStack):
 
         """
         project = cb.PipelineProject(
-            self, 'Build',
+            self, 'ApiBuild',
             environment={
                 'build_image': cb.LinuxBuildImage.STANDARD_4_0,
                 'privileged': True,
@@ -244,12 +229,17 @@ class InfraStack(BaseStack):
                         'coverage report -m',
                     ]},
                     'build': {'commands': [
-                        f'docker build . -t {ecr_repo.repository_uri}:latest',
+                        f'docker build . -t {self.ecr_repo.repository_uri}:latest',
                     ]},
                     'post_build': {'commands': [
                         '$(aws ecr get-login --no-include-email)',
-                        f'docker push {ecr_repo.repository_uri}:latest',
-                        f'printf \'[{{"name": "{self.config.ecr_repo_name}", "imageUri": "{ecr_repo.repository_uri}:latest"}}]\' > imagedefinitions.json',
+                        f'docker push {self.ecr_repo.repository_uri}:latest',
+                        ''.join([
+                            'printf \'[{',
+                            f'"name": "{self.config.api.ecr_repo}",',
+                            f'"imageUri": "{self.ecr_repo.repository_uri}:latest"',
+                            '}]\' > imagedefinitions.json',
+                        ]),
                         'cat imagedefinitions.json',
                     ]},
                 },
@@ -272,32 +262,34 @@ class InfraStack(BaseStack):
         ))
         return project
 
-    def setup_source_repo(self):
-        """Get or create a CodeCommit repository"""
+    def setup_api_source(self):
+        """Get or create a CodeCommit repository
+
+        Returns
+        -------
+        codecommit.Repository
+
+        """
+
         source_repo = cc.Repository.from_repository_name(
-            self, 'CodeRepository',
-            repository_name=self.config.source_repo
+            self, 'ApiCodeRepository',
+            repository_name=self.config.api.source_repo
         )
         if not source_repo:
             # create ECR repository object if no existing one
             source_repo = cc.Repository(
-                self, 'CodeRepository',
-                repository_name=self.config.ecr_repo_name,
+                self, 'ApiCodeRepository',
+                repository_name=self.config.api.ecr_repo,
             )
         return source_repo
 
-    def setup_pipeline(self, source_repo, build_project, service):
+    def setup_api_pipeline(self):
         """Setup the build pipeline.
         Using codepipeline to create a Pipeline
         including two stages:
             * Source: CodeCommitSourceAction
             * Build:  CodeBuildActioin
             * Deploy: Deploy to Fargate service
-
-        Parameters
-        ----------
-        build_object : PipelineProject
-            The object returned from self.setup_build_project
 
         Returns
         -------
@@ -306,15 +298,15 @@ class InfraStack(BaseStack):
         source_output = cp.Artifact()
         build_output = cp.Artifact(self.config.build_output)
         cp.Pipeline(
-            self, 'Pipeline',
-            pipeline_name=self.config.pipeline,
+            self, 'ApiPipeline',
+            pipeline_name=self.config.api.pipeline,
             stages=[
                 cp.StageProps(
                     stage_name='Source',
                     actions=[
                         cp_actions.CodeCommitSourceAction(
                             action_name='Source',
-                            repository=source_repo,
+                            repository=self.api_source,
                             branch='master',
                             output=source_output,
                         )
@@ -325,7 +317,7 @@ class InfraStack(BaseStack):
                     actions=[
                         cp_actions.CodeBuildAction(
                             action_name='Build',
-                            project=build_project,
+                            project=self.api_build_project,
                             input=source_output,
                             outputs=[build_output]
                         )
@@ -336,9 +328,132 @@ class InfraStack(BaseStack):
                     actions=[
                         cp_actions.EcsDeployAction(
                             action_name='Deploy',
-                            service=service.service,
+                            service=self.service.service,
                             input=build_output,
                             # image_file=build_output.at_path('imagedefinitions.json')
+                        )
+                    ]
+                )
+            ]
+        )
+
+    def setup_web_bucket(self):
+        """Setup S3 bucket to host website"""
+
+        return s3.Bucket(
+            self, 'WebBucket',
+            bucket_name=self.config.web.bucket_name,
+            public_read_access=True,
+            removal_policy=core.RemovalPolicy.DESTROY,
+            website_index_document='index.html',
+        )
+
+    def setup_web_source(self):
+        """Setup source repo for WEB frontend
+
+        Returns
+        -------
+        codecommit.Repository
+
+        """
+
+        name = 'WebSourceRepo'
+        source_repo = cc.Repository.from_repository_name(
+            self, name,
+            repository_name=self.config.web.source_repo
+        )
+        if not source_repo:
+            source_repo = cc.Repository(
+                self, name,
+                repository_name=self.config.web.source_repo
+            )
+        return source_repo
+
+    def setup_web_build_project(self):
+        """Setup build project for WEB frontend
+        Using codebuild to create a PipelineProject
+        including three phases:
+            * install:   npm install
+            * pre_build: run unit tests
+            * build:     npm run build and setup artifacts
+
+        Returns
+        -------
+        codepipeline.PipelineProject
+
+        """
+
+        return cb.PipelineProject(
+            self, 'WebBuild',
+            build_spec=cb.BuildSpec.from_object(dict(
+                version=0.2,
+                phases={
+                    'install': {'commands': ['npm install']},
+                    'pre_build': {'commands': ['npm run test:unit']},
+                    'build': {'commands': [
+                        'npm run build',
+                        'COMMIT_HAHS=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION |cut -c 1-7)'
+                        'echo ${COMMIT_HASH} > dist/version.txt',
+                    ]}
+                },
+                artifacts={
+                    'files': ['**/*'],
+                    'base-directory': 'dist',
+                    'name': "dist-${COMMIT_HASH}"
+                }
+            ))
+        )
+
+    def setup_web_pipeline(self):
+        """Setup the build pipeline.
+        Using codepipeline to create a Pipeline
+        including two stages:
+            * Source: CodeCommitSourceAction
+            * Build : CodeBuildActioin
+            * Deploy: S3DeployAction
+
+        Returns
+        -------
+        codepipeline.Pipeline
+
+        """
+
+        source_output = cp.Artifact()
+        build_output = cp.Artifact(self.config.web.build_output)
+        cp.Pipeline(
+            self, 'WebPipeline',
+            pipeline_name=self.config.web.pipeline,
+            stages=[
+                cp.StageProps(
+                    stage_name='Source',
+                    actions=[
+                        cp_actions.CodeCommitSourceAction(
+                            action_name='Source',
+                            repository=self.web_source,
+                            branch='master',
+                            output=source_output,
+                        )
+                    ]
+                ),
+                cp.StageProps(
+                    stage_name='Build',
+                    actions=[
+                        cp_actions.CodeBuildAction(
+                            action_name='Build',
+                            project=self.web_build_project,
+                            input=source_output,
+                            outputs=[build_output]
+                        )
+                    ]
+                ),
+                cp.StageProps(
+                    stage_name='Deploy',
+                    actions=[
+                        cp_actions.S3DeployAction(
+                            action_name='Deploy',
+                            bucket=self.web_bucket,
+                            input=build_output,
+                            access_control=s3.BucketAccessControl.PUBLIC_READ
                         )
                     ]
                 )
