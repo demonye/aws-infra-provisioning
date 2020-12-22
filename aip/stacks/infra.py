@@ -144,7 +144,7 @@ class InfraStack(BaseStack):
     def setup_service(self, cluster, ecr_repo):
         """Setup task definition"""
 
-        return patterns.ApplicationLoadBalancedFargateService(
+        service = patterns.ApplicationLoadBalancedFargateService(
             self, 'FargateService',
             cluster=cluster,            # Required
             cpu=256,                    # Default is 256
@@ -156,6 +156,23 @@ class InfraStack(BaseStack):
                 image=ecs.ContainerImage.from_ecr_repository(ecr_repo)),
             public_load_balancer=True
         )
+        service.role.add_to_policy(iam.PolicyStatement(
+            resources=['*'],
+            actions=[
+                'dynamodb:BatchGetItem',
+                'dynamodb:GetRecords',
+                'dynamodb:GetShardIterator',
+                'dynamodb:Query',
+                'dynamodb:Scan',
+                'dynamodb:GetItem',
+                'dynamodb:BatchWriteItem',
+                'dynamodb:PutItem',
+                'dynamodb:UpdateItem',
+                'dynamodb:DeleteItem',
+            ],
+            sid='AllowFargateAccessDynamoDB'
+        ))
+        return service
 
     def setup_cloudfront(self, service):
         """Setup CloudFront pointing to LB"""
