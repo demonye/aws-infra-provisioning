@@ -1,8 +1,19 @@
+"""AWS Infrastructure Provisioning
+
+What to provision?
+    VPC and network setup
+    ECS cluster with Fargate service and Load Balancer
+    S3 buckets
+    CloudFront
+    ECR repository
+    Deployment pipeline
+
+"""
+
 from aws_cdk import (
     core,
 
     aws_ec2 as ec2,
-    aws_s3 as s3,
     aws_ecr as ecr,
     aws_iam as iam,
 
@@ -10,7 +21,6 @@ from aws_cdk import (
     aws_dynamodb as db,
     aws_autoscaling as autoscaling,
     aws_elasticloadbalancingv2 as elbv2,
-    aws_elasticloadbalancingv2_targets as targets,
     aws_ecs_patterns as patterns,
     aws_cloudfront as cf,
     aws_cloudfront_origins as origins,
@@ -25,10 +35,10 @@ from . import BaseStack
 
 
 class InfraStack(BaseStack):
-    """AWS Infrastructure Provisioning: VPC, network, Database, Cluster and Load Balancer"""
+    """AWS Infrastructure Provisioning Stack"""
 
     def __init__(self, scope: core.Construct, construct_id: str, **kwargs) -> None:
-        """RdsStack.__init__.
+        """InfraStack.__init__.
 
         Parameters
         ----------
@@ -249,7 +259,7 @@ class InfraStack(BaseStack):
             ))
         )
         project.role.add_to_policy(iam.PolicyStatement(
-            resources=[project.project_arn],
+            resources=['*'],
             actions=[
                 'ecr:GetAuthorizationToken',
                 "ecr:InitiateLayerUpload",

@@ -5,7 +5,7 @@ cmd_output=$(aws codecommit create-repository --repository-name $repo_name 2>&1)
 echo $cmd_output |grep -q "already exists"
 if [ $? -eq 0 ]; then
     echo "The repository $repo_name exists!"
-    echo "Do you want delete it and re-create? [y/N] " && read confirmed
+    echo -n "Do you want delete it and re-create? [y/N] " && read confirmed
     if [[ "$confirmed" == "y" ]] || [[ "$confirmed" == "Y" ]]; then
         aws codecommit delete-repository --repository-name $repo_name
         aws codecommit create-repository --repository-name $repo_name
