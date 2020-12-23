@@ -20,8 +20,6 @@ from aws_cdk import (
 
     aws_ecs as ecs,
     aws_dynamodb as db,
-    aws_autoscaling as autoscaling,
-    aws_elasticloadbalancingv2 as elbv2,
     aws_ecs_patterns as patterns,
     aws_cloudfront as cf,
     aws_cloudfront_origins as origins,
@@ -54,30 +52,38 @@ class InfraStack(BaseStack):
         super().__init__(scope, construct_id, **kwargs)
 
         self.vpc = self.setup_vpc()
-        # asg = self.setup_asg()
 
         # ECS Service
         self.cluster = self.setup_cluster()
-        self.ecr_repo = self.setup_ecr()
+        self.ecr_repo = self.setup_api_ecr()
         self.service = self.setup_service()
 
         # API pipeline
         self.api_source = self.setup_api_source()
         self.api_build_project = self.setup_api_build_project()
-        self.setup_api_pipeline()
+        self.api_pipeline = self.setup_api_pipeline()
 
         # Web pipeline
         self.web_bucket = self.setup_web_bucket()
         self.web_source = self.setup_web_source()
         self.web_build_project = self.setup_web_build_project()
-        self.setup_web_pipeline()
+        self.web_pipeline = self.setup_web_pipeline()
 
         # Others
         self.table = self.setup_db()
         self.distribution = self.setup_cloudfront()
 
     def setup_vpc(self):
-        """Setup VPC and network"""
+        """Setup VPC and network
+
+        Create Vpc with 2 subnets on 2 availability zones:
+            Public:  10.20.0.0/24 on AZ1 | 10.20.1.0/24 on AZ2
+            Private: 10.20.2.0/24 on AZ1 | 10.20.3.0/24 on AZ2
+
+        Returns
+        -------
+        aws_ce2.Vpc
+        """
 
         return ec2.Vpc(
             self, 'Vpc', cidr=self.config.vpc_cidr,
@@ -96,7 +102,16 @@ class InfraStack(BaseStack):
         )
 
     def setup_db(self):
-        """Setup DynamoDB database"""
+        """Setup DynamoDB database
+
+        Notes
+        -----
+        Have to assign dynamodb scan,read/write permissions to Fargate task
+
+        Returns
+        -------
+        aws_dynamodb.Table
+        """
 
         table = db.Table.from_table_name(self, 'Table', table_name=self.config.api.table_name)
         if not table:
@@ -104,6 +119,7 @@ class InfraStack(BaseStack):
                 self, 'Table', table_name=self.config.api.table_name,
                 partition_key=db.Attribute(name='id', type=db.AttributeType.STRING)
             )
+
         self.service.task_definition.add_to_task_role_policy(iam.PolicyStatement(
             resources=[table.table_arn],
             actions=[
@@ -120,17 +136,6 @@ class InfraStack(BaseStack):
         ))
         return table
 
-    def setup_asg(self):
-        """Setup the auto scaling group"""
-
-        return autoscaling.AutoScalingGroup(
-            self, 'ASG', vpc=self.vpc,
-            instance_type=ec2.InstanceType("t2.micro"),
-            machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
-            # task_drain_time=core.Duration.seconds(300)
-            desired_capacity=2
-        )
-
     def setup_cluster(self):
         """Setup ECS cluster"""
 
@@ -140,13 +145,19 @@ class InfraStack(BaseStack):
         )
 
     def setup_service(self):
-        """Setup task definition"""
+        """Setup ALB Fargate service
+
+        Returns
+        -------
+        aws_ecs_patterns.ApplicationLoadBalancedFargateService
+
+        """
 
         service = patterns.ApplicationLoadBalancedFargateService(
             self, 'FargateService',
             cluster=self.cluster,       # Required
-            cpu=256,                    # Default is 256
-            memory_limit_mib=512,
+            cpu=256,                    # 0.25 CPU
+            memory_limit_mib=512,       # 0.5G
             desired_count=2,            # Default is 1
             task_image_options=patterns.ApplicationLoadBalancedTaskImageOptions(
                 container_name=self.config.api.ecr_repo,
@@ -158,8 +169,12 @@ class InfraStack(BaseStack):
 
     def setup_cloudfront(self):
         """Setup CloudFront
-        / is pointing to S3
-        /api is pointing to Load Balancer
+            / is pointing to S3
+            /api is pointing to Load Balancer
+
+        Returns
+        -------
+        aws_cloudfront.Distribution that redirecting traffic to ALB
 
         """
 
@@ -179,8 +194,18 @@ class InfraStack(BaseStack):
             }
         )
 
-    def setup_ecr(self):
-        """Get or create a ECR repository"""
+    def setup_api_ecr(self):
+        """Get or create a ECR repository for API image
+
+        Notes
+        -----
+        The repo should be existing before the stack deploy
+
+        Returns
+        -------
+        aws_ecr.Repository object will be used in ALB Fargate service
+
+        """
 
         ecr_repo = ecr.Repository.from_repository_name(
             self, 'Repository', repository_name=self.config.api.ecr_repo
@@ -196,20 +221,16 @@ class InfraStack(BaseStack):
 
     def setup_api_build_project(self):
         """Setup the build project.
-        Using codebuild to create a PipelineProject
-        including four phases:
-            * install:    Instaall requirements for unit test
-            * pre_build:  kRun tests and login into aws ecr
-            * build:      Build and tag docker image
-            * post_build: push image to ECR
 
-        Parameters
-        ----------
-        None
+        Using codebuild to create a PipelineProject with four phases:
+            * install:    Instaall requirements for unit test
+            * pre_build:  Run unit tests and show coverage
+            * build:      Build and tag docker image
+            * post_build: Login into aws ecr, push image to ECR
 
         Returns
         -------
-        PipelineProject object to be used in Pipeline
+        aws_codebuild.PipelineProject object to be used in Pipeline
 
         """
         project = cb.PipelineProject(
@@ -264,11 +285,15 @@ class InfraStack(BaseStack):
         return project
 
     def setup_api_source(self):
-        """Get or create a CodeCommit repository
+        """Get or create a CodeCommit repository for API code
+
+        Notes
+        -----
+        The repo should be existing before the stack deploy
 
         Returns
         -------
-        codecommit.Repository
+        aws_codecommit.Repository
 
         """
 
@@ -285,20 +310,22 @@ class InfraStack(BaseStack):
         return source_repo
 
     def setup_api_pipeline(self):
-        """Setup the build pipeline.
-        Using codepipeline to create a Pipeline
-        including two stages:
+        """Setup the build pipeline for API.
+
+        Using codepipeline to create a Pipeline with 3 steps
             * Source: CodeCommitSourceAction
             * Build:  CodeBuildActioin
-            * Deploy: Deploy to Fargate service
+            * Deploy: EcsDeployAction: deploy to ECS service
 
         Returns
         -------
-        None
+        aws_codepipeline.Pipeline
+
         """
+
         source_output = cp.Artifact()
         build_output = cp.Artifact(self.config.build_output)
-        cp.Pipeline(
+        return cp.Pipeline(
             self, 'ApiPipeline',
             pipeline_name=self.config.api.pipeline,
             stages=[
@@ -339,7 +366,12 @@ class InfraStack(BaseStack):
         )
 
     def setup_web_bucket(self):
-        """Setup S3 bucket to host website"""
+        """Setup S3 bucket to host website
+
+        Returns
+        -------
+        aws_s3.Bucket to host the web front end
+        """
 
         return s3.Bucket(
             self, 'WebBucket',
@@ -350,11 +382,15 @@ class InfraStack(BaseStack):
         )
 
     def setup_web_source(self):
-        """Setup source repo for WEB frontend
+        """Setup source repo for WEB frontend code
+
+        Notes
+        -----
+        Should be existing source created before the stack deploy
 
         Returns
         -------
-        codecommit.Repository
+        aws_codecommit.Repository for the web front end
 
         """
 
@@ -371,16 +407,15 @@ class InfraStack(BaseStack):
         return source_repo
 
     def setup_web_build_project(self):
-        """Setup build project for WEB frontend
-        Using codebuild to create a PipelineProject
-        including three phases:
+        """Setup build project for Web frontend
+        Using codebuild to create a PipelineProject with 3 phases:
             * install:   npm install
             * pre_build: run unit tests
             * build:     npm run build and setup artifacts
 
         Returns
         -------
-        codepipeline.PipelineProject
+        aws_codepipeline.PipelineProject used for web front end deploy
 
         """
 
@@ -407,21 +442,21 @@ class InfraStack(BaseStack):
 
     def setup_web_pipeline(self):
         """Setup the build pipeline.
-        Using codepipeline to create a Pipeline
-        including two stages:
+
+        Using codepipeline to create a Web Pipeline with 3 stages:
             * Source: CodeCommitSourceAction
             * Build : CodeBuildActioin
             * Deploy: S3DeployAction
 
         Returns
         -------
-        codepipeline.Pipeline
+        aws_codepipeline.Pipeline
 
         """
 
         source_output = cp.Artifact()
         build_output = cp.Artifact(self.config.web.build_output)
-        cp.Pipeline(
+        return cp.Pipeline(
             self, 'WebPipeline',
             pipeline_name=self.config.web.pipeline,
             stages=[

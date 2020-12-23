@@ -4,29 +4,12 @@ from aws_cdk import core
 from aip.stacks import InfraStack
 
 
-@unittest.skip
 class TestInstallRequires(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         cls.app = core.App()
         cls.stack = InfraStack(cls.app, 'AipTestStack')
-
-    def test_item_types(self):
-        for name, type_ in {
-            "api_build_project": "<class 'aws_cdk.aws_codebuild.PipelineProject'>",
-            "web_bucket": "<class 'aws_cdk.aws_s3.Bucket'>",
-            "web_build_project": "<class 'aws_cdk.aws_codebuild.PipelineProject'>",
-            "distribution": "<class 'aws_cdk.aws_cloudfront.Distribution'>",
-
-            # Not existing yet
-            "api_source": "<class 'jsii._reference_map.InterfaceDynamicProxy'>",
-            "web_source": "<class 'jsii._reference_map.InterfaceDynamicProxy'>",
-            "table": "<class 'jsii._reference_map.InterfaceDynamicProxy'>",
-        }.items():
-            assert hasattr(self.stack, name)
-            attr = getattr(self.stack, name)
-            assert str(type(attr)) == type_
 
     def test_vpc_setup(self):
         self.assertEqual(str(type(self.stack.vpc)), "<class 'aws_cdk.aws_ec2.Vpc'>")
@@ -135,11 +118,11 @@ class TestInstallRequires(unittest.TestCase):
             }
         )
 
-    def test_clooudfront_setup(self):
-        pass
+    def test_cloudfront_setup(self):
+        self.assertEqual(str(type(self.stack.distribution)), "<class 'aws_cdk.aws_cloudfront.Distribution'>")
 
     def test_api_pipeline_setup(self):
-        pass
+        self.assertEqual(str(type(self.stack.api_pipeline)), "<class 'aws_cdk.aws_codepipeline.Pipeline'>")
 
     def test_web_pipeline_setup(self):
-        pass
+        self.assertEqual(str(type(self.stack.web_pipeline)), "<class 'aws_cdk.aws_codepipeline.Pipeline'>")
