@@ -114,12 +114,6 @@ class InfraStack(BaseStack):
         """
 
         table = db.Table.from_table_name(self, 'Table', table_name=self.config.api.table_name)
-        if not table:
-            table = db.Table(
-                self, 'Table', table_name=self.config.api.table_name,
-                partition_key=db.Attribute(name='id', type=db.AttributeType.STRING)
-            )
-
         self.service.task_definition.add_to_task_role_policy(iam.PolicyStatement(
             resources=[table.table_arn],
             actions=[
@@ -146,6 +140,12 @@ class InfraStack(BaseStack):
 
     def setup_service(self):
         """Setup ALB Fargate service
+
+        Notes
+        -----
+        The container_name in task_image_options shoue be an exsiting image in
+        ECR repository. Otherwise, the CFN stack will be stuck waiting for the image.
+
 
         Returns
         -------
@@ -195,11 +195,12 @@ class InfraStack(BaseStack):
         )
 
     def setup_api_ecr(self):
-        """Get or create a ECR repository for API image
+        """Get ECR repository for API image
 
         Notes
         -----
-        The repo should be existing before the stack deploy
+        The repo and the image should be existing before the stack deploy.
+        Otherwise, the CFN stack creation will be stuck
 
         Returns
         -------
@@ -207,17 +208,9 @@ class InfraStack(BaseStack):
 
         """
 
-        ecr_repo = ecr.Repository.from_repository_name(
+        return ecr.Repository.from_repository_name(
             self, 'Repository', repository_name=self.config.api.ecr_repo
         )
-        if not ecr_repo:
-            # create ECR repository object if no existing one
-            ecr_repo = ecr.Repository(
-                self, 'Repository',
-                repository_name=self.config.api.ecr_repo,
-                image_scan_on_push=True,
-            )
-        return ecr_repo
 
     def setup_api_build_project(self):
         """Setup the build project.
@@ -285,7 +278,7 @@ class InfraStack(BaseStack):
         return project
 
     def setup_api_source(self):
-        """Get or create a CodeCommit repository for API code
+        """Get the CodeCommit repository for API code
 
         Notes
         -----
@@ -297,17 +290,10 @@ class InfraStack(BaseStack):
 
         """
 
-        source_repo = cc.Repository.from_repository_name(
-            self, 'ApiCodeRepository',
+        return cc.Repository.from_repository_name(
+            self, 'ApiSourceRepo',
             repository_name=self.config.api.source_repo
         )
-        if not source_repo:
-            # create ECR repository object if no existing one
-            source_repo = cc.Repository(
-                self, 'ApiCodeRepository',
-                repository_name=self.config.api.ecr_repo,
-            )
-        return source_repo
 
     def setup_api_pipeline(self):
         """Setup the build pipeline for API.
@@ -382,7 +368,7 @@ class InfraStack(BaseStack):
         )
 
     def setup_web_source(self):
-        """Setup source repo for WEB frontend code
+        """Get source repo for WEB frontend code
 
         Notes
         -----
@@ -394,17 +380,10 @@ class InfraStack(BaseStack):
 
         """
 
-        name = 'WebSourceRepo'
-        source_repo = cc.Repository.from_repository_name(
-            self, name,
+        return cc.Repository.from_repository_name(
+            self, 'WebSourceRepo',
             repository_name=self.config.web.source_repo
         )
-        if not source_repo:
-            source_repo = cc.Repository(
-                self, name,
-                repository_name=self.config.web.source_repo
-            )
-        return source_repo
 
     def setup_web_build_project(self):
         """Setup build project for Web frontend

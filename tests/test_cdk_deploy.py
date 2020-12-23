@@ -120,9 +120,55 @@ class TestInstallRequires(unittest.TestCase):
 
     def test_cloudfront_setup(self):
         self.assertEqual(str(type(self.stack.distribution)), "<class 'aws_cdk.aws_cloudfront.Distribution'>")
+        self.assertEqual(self.stack.distribution.to_string(), 'AipTestStack/CloudFront')
+        # TODO Don't know how to get default_behavior and additional_behaviors
 
     def test_api_pipeline_setup(self):
         self.assertEqual(str(type(self.stack.api_pipeline)), "<class 'aws_cdk.aws_codepipeline.Pipeline'>")
+        self.assertEqual(self.stack.api_pipeline.to_string(), 'AipTestStack/ApiPipeline')
+        self.assertEqual(self.stack.api_pipeline.stage_count, 3)
+
+        def stage_type(stage):
+            return type(self.stack.api_pipeline.stage(stage).actions[0]).__name__
+
+        self.assertEqual(stage_type('Source'), 'CodeCommitSourceAction')
+        self.assertEqual(stage_type('Build'), 'CodeBuildAction')
+        self.assertEqual(stage_type('Deploy'), 'EcsDeployAction')
+
+        env_values = self.stack.api_build_project.node.default_child.environment._values
+        self.assertEqual(env_values['image'], 'aws/codebuild/standard:4.0')
+        self.assertTrue(env_values['privileged_mode'])
+
+        build_permissions = self.stack.api_build_project.node.children[0].node.children[1].document.to_json()
+        ecr_permissions = None
+        for stat in build_permissions['Statement']:
+            if stat['Action'][0].startswith('ecr:'):
+                ecr_permissions = stat
+                break
+        self.assertEqual(ecr_permissions, {
+            "Action": [
+                "ecr:GetAuthorizationToken",
+                "ecr:InitiateLayerUpload",
+                "ecr:UploadLayerPart",
+                "ecr:CompleteLayerUpload",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:PutImage"
+            ],
+            "Effect": "Allow",
+            "Resource": "*",
+            "Sid": "AllowECRLoginAndPush"
+        })
+
+        # TODO Don't know how to check build_spec
 
     def test_web_pipeline_setup(self):
         self.assertEqual(str(type(self.stack.web_pipeline)), "<class 'aws_cdk.aws_codepipeline.Pipeline'>")
+        self.assertEqual(self.stack.web_pipeline.to_string(), 'AipTestStack/WebPipeline')
+        self.assertEqual(self.stack.web_pipeline.stage_count, 3)
+
+        def stage_type(stage):
+            return type(self.stack.web_pipeline.stage(stage).actions[0]).__name__
+
+        self.assertEqual(stage_type('Source'), 'CodeCommitSourceAction')
+        self.assertEqual(stage_type('Build'), 'CodeBuildAction')
+        self.assertEqual(stage_type('Deploy'), 'S3DeployAction')

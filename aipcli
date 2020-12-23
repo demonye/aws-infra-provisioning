@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import fire
+from rich.console import Console
 
 
 class AipCli(object):
@@ -16,8 +17,10 @@ class AipCli(object):
         Bump and push the tag to generate the new docker image
     build
         Build the docker image
-    test
-        Test the stack codes
+    unittest
+        Run unit tests
+    integration
+        Run some integration tests
 
     Options
     -------
@@ -26,13 +29,33 @@ class AipCli(object):
 
     """
 
-    def __init__(self, mark='!'):
-        self._mark = mark
+    def test(self, unittest=False, integration=False):
+        """Run tests
 
-    def unittest(self):
-        import unittest
-        suite = unittest.TestLoader().discover('tests')
-        unittest.TextTestRunner().run(suite)
+        Usage
+        -----
+        Run unit tests
+          ./awscli test --unittest (or ./awscli test -u)
+
+        Run integration tests
+          ./awscli test --integration (or ./awscli test -i)
+
+        """
+
+        console = Console()
+
+        if unittest:
+            import unittest
+
+            console.log('Runnig unit tests...')
+            suite = unittest.TestLoader().discover('tests')
+            unittest.TextTestRunner().run(suite)
+
+        if integration:
+            from tests import integrations as intg
+
+            console.log('Runnig integration tests...')
+            intg.test_vpc_subnets()
 
 
 if __name__ == '__main__':
