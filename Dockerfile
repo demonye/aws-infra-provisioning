@@ -11,5 +11,5 @@ RUN pip3 install -r requirements/prod.txt
 RUN pip3 install git-remote-codecommit awscli
 COPY aip /app/aip/
 COPY tests /app/tests/
-COPY app.py tasks.py cdk.json bin/deploy.sh /app/
+COPY app.py cdk.json bin/deploy.sh /app/
 COPY demoapp /app/demoapp/
