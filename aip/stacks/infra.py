@@ -144,7 +144,7 @@ class InfraStack(BaseStack):
 
         service = patterns.ApplicationLoadBalancedFargateService(
             self, 'FargateService',
-            cluster=self.cluster,            # Required
+            cluster=self.cluster,       # Required
             cpu=256,                    # Default is 256
             memory_limit_mib=512,
             desired_count=2,            # Default is 1

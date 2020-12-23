@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+
+import fire
+
+
+class AipCli(object):
+    """AIP command line tool
+
+    Integrate all useful tools here
+
+    Commands
+    --------
+    deploy
+        Deploy the stack to AWS CloudFormation
+    bumptag
+        Bump and push the tag to generate the new docker image
+    build
+        Build the docker image
+    test
+        Test the stack codes
+
+    Options
+    -------
+    --dry-run
+        Test stack code and check the correctness (for deploy command)
+
+    """
+
+    def __init__(self, mark='!'):
+        self._mark = mark
+
+    def unittest(self):
+        import unittest
+        suite = unittest.TestLoader().discover('tests')
+        unittest.TextTestRunner().run(suite)
+
+
+if __name__ == '__main__':
+    fire.Fire(AipCli)
