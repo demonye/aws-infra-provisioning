@@ -16,4 +16,3 @@ aws-cdk-aws-cloudfront-origins==1.80.0
 # aws-cdk.aws-lambda==1.80.0
 
 boto3==1.16.40
-fire==0.3.1

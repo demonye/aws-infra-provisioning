@@ -7,7 +7,7 @@ RUN mkdir /app
 
 WORKDIR /app
 COPY requirements /app/requirements/
-RUN pip3 install -r requirements/prod.txt
+RUN pip3 install -r requirements/test.txt
 RUN pip3 install git-remote-codecommit awscli
 COPY aip /app/aip/
 COPY tests /app/tests/
