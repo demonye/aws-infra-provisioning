@@ -5,7 +5,7 @@ from io import StringIO
 import tempfile
 import unittest
 
-from src.lib.helpers import (
+from aip.helpers import (
     get_logger,
     get_install_requires,
 )
@@ -86,8 +86,10 @@ class TestGetLogger(unittest.TestCase):
         logger.info(message)
         log_message = stream.getvalue()
 
-        date_regx = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}'
+        date_regx = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{1,3}'
         m = re.match(rf"^\[INFO\] \[{date_regx}\] (.+?) (.*)\n$", log_message)
+        if m is None:
+            print(f'|{log_message}|')
         self.assertIsNotNone(m)
         self.assertEqual(m.group(1), name)
         self.assertEqual(m.group(2), message)
