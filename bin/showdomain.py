@@ -20,10 +20,11 @@ if __name__ == '__main__':
 
     if domain_name:
         print(
-            '\n\n\n\n\n'
-            f'CloutFront domain: \033[1;31mhttp://{domain_name}\033[0m\n'
-            'Open in browser to test the website!!\n'
-            '\n\n\n\n\n'
+            '\n\n\n\n'
+            f'CloutFront domain: \033[1;31mhttp://{domain_name}\033[0m\n\n'
+            'Open in browser to test the website.\n\n'
+            'It might take up to 10 minutes to go live, take a break and come back later!\n'
+            '\n\n\n\n'
         )
     else:
         print(

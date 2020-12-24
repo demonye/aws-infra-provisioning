@@ -25,3 +25,13 @@ echo "0.0.1" >version.txt
 git add . && git commit -am "initial command"
 git remote add origin codecommit::$AWS_DEFAULT_REGION://$repo_name
 git push -u origin master
+
+table_name=$(cat config.json |jq -r .table_name)
+aws dynamodb create-table \
+    --table-name $table_name \
+    --attribute-definitions \
+        AttributeName=id,AttributeType=S \
+    --key-schema \
+        AttributeName=id,KeyType=HASH \
+    --provisioned-throughput \
+        ReadCapacityUnits=10,WriteCapacityUnits=5

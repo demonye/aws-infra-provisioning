@@ -9,16 +9,6 @@
 * ECR repository
 * Deployment pipeline
 
-## CloudFormation Stacks
-
-* Infra Stack
-  * Cloud Front
-  * S3
-  * CodePipeline (including build and deploy to ECS)
-  * RDS (Commented out for now due to long wait)
-  * VPC/subnets
-  * ECS patterns service (ALB Fargate)
-
 ## How to run
 
 * Run a docker container in the background

@@ -28,4 +28,4 @@ sh ./set_code.sh
 sh ./build.sh
 cd ../..
 
-cdk deploy && python ./showdomain.py
+cdk deploy && python3 ./showdomain.py
