@@ -17,15 +17,15 @@ fi
 # dockerd --host=unix:///var/run/docker.sock --host=tcp://0.0.0.0:2375 2>&1 &
 # sleep 3
 
+# setup demoapp Web code
+cd demoapp/web
+sh ./set_code.sh
+cd ../..
+
 # setup demoapp API code
 cd demoapp/api
 sh ./set_code.sh
 sh ./build.sh
-cd ../..
-
-# setup demoapp API code
-cd demoapp/web
-sh ./set_code.sh
 cd ../..
 
 cdk deploy && python ./showdomain.py
