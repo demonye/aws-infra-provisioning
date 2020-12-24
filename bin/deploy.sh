@@ -28,6 +28,4 @@ cd demoapp/web
 sh ./set_code.sh
 cd ../..
 
-cdk deploy
-
-
+cdk deploy && python ./showdomain.py
