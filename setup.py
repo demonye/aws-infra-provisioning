@@ -9,7 +9,7 @@ with open("README.md") as fp:
 
 setuptools.setup(
     name="aip",
-    version="0.1.5",
+    version="0.1.6",
 
     description="An empty CDK Python app",
     long_description=long_description,
