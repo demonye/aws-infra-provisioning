@@ -1,4 +1,4 @@
-FROM docker:18-dind
+FROM docker:20-dind
 
 RUN apk update && apk add nodejs npm python3 py3-pip git jq
 RUN npm install -g aws-cdk && cdk --version
